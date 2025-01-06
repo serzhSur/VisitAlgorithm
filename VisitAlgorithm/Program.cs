@@ -1,56 +1,105 @@
 ﻿using VisitAlgorithm;
 
-var start = new TimeSpan(10, 0, 0);
-var end = new TimeSpan(15, 0, 0);
-var interval = new TimeSpan(1, 0, 0);
-var schedule = new List<Appointment>();
-
-for (var i = start; i < end; i += interval)
-{
-    schedule.Add(new Appointment { Start = i, Stop = i + interval, Status = "free" });
-}
+List<Appointment> schedule = CreateBlankTimeTeble();
 
 ShowTimeTable(schedule);
 
 var newApp1 = new Appointment
 {
-    Start = new TimeSpan(11, 0, 0),
-    Stop = new TimeSpan(12, 15, 0),
-    Status = "стрижка 15мин"
+    Start = new TimeSpan(10, 15, 0),
+    Stop = new TimeSpan(11, 20, 0),
+    Status = "стрижка"
 };
 
-AddAppointment(schedule, newApp1);
+AddAppointment(IntervalAvailabilityCheck(schedule, newApp1),schedule, newApp1);
 
-//ShowTimeTable(schedule);
+ShowTimeTable(schedule);
 
-//var app2 = new Appointment
-//{
-//    Start = new TimeSpan(11, 30, 0),
-//    Stop = new TimeSpan(12, 00, 0),
-//    Status = "окрашивание 1ч 30мин"
-//};
-
-//AddAppointment(schedule, app2);
-
-//ShowTimeTable(schedule);
-
-static void AddAppointment(List<Appointment> schedule, Appointment newApp1)
+var app2 = new Appointment
 {
-    //var crossingIntervals = schedule.FirstOrDefault(s => s.Start < newApp1.Stop && newApp1.Start < s.Stop);
-    var crossingIntervals = schedule.Where(s => s.Start < newApp1.Stop && newApp1.Start < s.Stop).ToList();
+    Start = new TimeSpan(11, 30, 0),
+    Stop = new TimeSpan(12, 30, 0),
+    Status = "окрашивание"
+};
 
-    if (crossingIntervals != null)// && crossingIntervals.Status == "free")
+AddAppointment(IntervalAvailabilityCheck(schedule, app2), schedule, app2);
+
+ShowTimeTable(schedule);
+static List<Appointment> IntervalAvailabilityCheck (List<Appointment> schedule, Appointment app)
+{
+    // Проверка на пустой список
+    if (schedule == null || !schedule.Any())
     {
-        schedule.Add(newApp1);// добавление нового интервала
+        Console.WriteLine("Расписание пустое.");
+        return new List<Appointment>(); 
+    }
 
-        //if (crossingIntervals.Stop<newApp1.Start)
+    // Проверка, находится ли новый интервал в пределах существующих
+    var minStartValue = schedule.Min(a => a.Start);
+    var maxStopValue = schedule.Max(a => a.Stop);
+    if (app.Start < minStartValue || app.Stop > maxStopValue)
+    {
+        Console.WriteLine("Интервал недоступен");
+        return new List<Appointment>(); 
+    }
 
-        //crossingIntervals.Start = newApp1.Stop;//редактироввание старого интервала
-        //schedule.Sort((a, b) => a.Start.CompareTo(b.Start));
+    // Находим пересекающиеся интервалы
+    var crossingIntervals = schedule.Where(s => s.Start < app.Stop && app.Start < s.Stop).ToList();
+
+    // Проверка, свободны ли все пересекающиеся интервалы
+    if (crossingIntervals.All(a => a.Status == "free"))
+    {
+        return crossingIntervals; // Возвращаем пересекающиеся интервалы
     }
     else
     {
-        Console.WriteLine("Интервал недоступен");
+        Console.WriteLine("Некоторые интервалы заняты");
+        return new List<Appointment>(); 
+    }
+
+}
+
+static void AddAppointment(List<Appointment> crossingIntervals, List<Appointment> schedule, Appointment newApp1)
+{
+    if (crossingIntervals != null&& crossingIntervals.Any())
+    {
+        schedule.Add(newApp1);// добавление нового интервала
+
+        //редактироввание старого интервала
+        foreach (var appointment in crossingIntervals)
+        {
+            if (appointment.Start < newApp1.Start && appointment.Stop > newApp1.Stop)
+            {
+                var newInterval = new Appointment
+                {
+                    Start = newApp1.Stop,
+                    Stop = appointment.Stop,
+                    Status = "free"
+                };
+                appointment.Stop = newApp1.Start;
+                schedule.Add(newInterval);
+            }
+            else if (appointment.Start < newApp1.Start && appointment.Stop < newApp1.Stop)
+            {
+                appointment.Stop = newApp1.Start;
+
+            }
+            else if (appointment.Stop > newApp1.Stop)
+            {
+                appointment.Start = newApp1.Stop;
+            }
+            else if (appointment.Start > newApp1.Start && appointment.Stop < newApp1.Stop)
+            {
+                schedule.Remove(appointment);
+            }
+        }
+
+        // удалить интервалы меньше минимальной длинны (меньше самого короткого сервиса)
+        schedule.Sort((a, b) => a.Start.CompareTo(b.Start));// сортируем расписание
+    }
+    else
+    {
+        Console.WriteLine("запись недоступна");
     }
 }
 
@@ -61,4 +110,19 @@ static void ShowTimeTable(List<Appointment> schedule)
     {
         Console.WriteLine($"{v.Start,8} -- {v.Stop,8} -- {v.Status,8}");
     }
+}
+
+static List<Appointment> CreateBlankTimeTeble()
+{
+    var start = new TimeSpan(10, 00, 0);
+    var end = new TimeSpan(15, 00, 0);
+    var interval = new TimeSpan(1, 0, 0);
+    var schedule = new List<Appointment>();
+
+    for (var i = start; i < end; i += interval)
+    {
+        schedule.Add(new Appointment { Start = i, Stop = i + interval, Status = "free" });
+    }
+
+    return schedule;
 }
