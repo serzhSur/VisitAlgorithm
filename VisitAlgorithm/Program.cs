@@ -1,7 +1,6 @@
 ﻿using VisitAlgorithm;
 
 List<Appointment> schedule = CreateBlankTimeTeble();
-
 ShowTimeTable(schedule);
 
 var newApp1 = new Appointment
@@ -10,9 +9,8 @@ var newApp1 = new Appointment
     Stop = new TimeSpan(11, 20, 0),
     Status = "стрижка"
 };
-
-AddAppointment(IntervalAvailabilityCheck(schedule, newApp1),schedule, newApp1);
-
+AddAppointmentToSchedule(CheckIntervalAvailability(schedule, newApp1), schedule, newApp1);
+RemoveSmalIntervals(schedule, new TimeSpan(0,15,0));
 ShowTimeTable(schedule);
 
 var app2 = new Appointment
@@ -21,17 +19,18 @@ var app2 = new Appointment
     Stop = new TimeSpan(12, 30, 0),
     Status = "окрашивание"
 };
-
-AddAppointment(IntervalAvailabilityCheck(schedule, app2), schedule, app2);
-
+AddAppointmentToSchedule(CheckIntervalAvailability(schedule, app2), schedule, app2);
+RemoveSmalIntervals(schedule, new TimeSpan(0, 15, 0));
 ShowTimeTable(schedule);
-static List<Appointment> IntervalAvailabilityCheck (List<Appointment> schedule, Appointment app)
+
+
+static List<Appointment> CheckIntervalAvailability(List<Appointment> schedule, Appointment app)
 {
     // Проверка на пустой список
     if (schedule == null || !schedule.Any())
     {
-        Console.WriteLine("Расписание пустое.");
-        return new List<Appointment>(); 
+        Console.WriteLine("No items in List<Appointment> schedule");
+        return new List<Appointment>();
     }
 
     // Проверка, находится ли новый интервал в пределах существующих
@@ -39,8 +38,8 @@ static List<Appointment> IntervalAvailabilityCheck (List<Appointment> schedule, 
     var maxStopValue = schedule.Max(a => a.Stop);
     if (app.Start < minStartValue || app.Stop > maxStopValue)
     {
-        Console.WriteLine("Интервал недоступен");
-        return new List<Appointment>(); 
+        Console.WriteLine("Time out of range");
+        return new List<Appointment>();
     }
 
     // Находим пересекающиеся интервалы
@@ -53,15 +52,15 @@ static List<Appointment> IntervalAvailabilityCheck (List<Appointment> schedule, 
     }
     else
     {
-        Console.WriteLine("Некоторые интервалы заняты");
-        return new List<Appointment>(); 
+        Console.WriteLine("Some time-intervals are busy");
+        return new List<Appointment>();
     }
 
 }
 
-static void AddAppointment(List<Appointment> crossingIntervals, List<Appointment> schedule, Appointment newApp1)
+static void AddAppointmentToSchedule(List<Appointment> crossingIntervals, List<Appointment> schedule, Appointment newApp1)
 {
-    if (crossingIntervals != null&& crossingIntervals.Any())
+    if (crossingIntervals != null && crossingIntervals.Any())
     {
         schedule.Add(newApp1);// добавление нового интервала
 
@@ -93,13 +92,11 @@ static void AddAppointment(List<Appointment> crossingIntervals, List<Appointment
                 schedule.Remove(appointment);
             }
         }
-
-        // удалить интервалы меньше минимальной длинны (меньше самого короткого сервиса)
         schedule.Sort((a, b) => a.Start.CompareTo(b.Start));// сортируем расписание
     }
     else
     {
-        Console.WriteLine("запись недоступна");
+        Console.WriteLine("Schedule not available");
     }
 }
 
@@ -125,4 +122,9 @@ static List<Appointment> CreateBlankTimeTeble()
     }
 
     return schedule;
+}
+
+static void RemoveSmalIntervals(List<Appointment> schedule, TimeSpan minIntervalSise)
+{
+    schedule.RemoveAll(appointment=>(appointment.Stop - appointment.Start)<minIntervalSise);
 }
